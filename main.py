@@ -51,23 +51,37 @@ def fetch_all() -> list[dict]:
     return items
 
 
+def _normalize_title(title: str) -> list[str]:
+    """Lowercase, strip punctuation, split into words -- catches the same
+    story served from different URLs (e.g. two different CDN mirror
+    subdomains for the identical article, seen for real during testing: the
+    same Al Jazeera piece via two distinct *.edgeone.app hostnames)."""
+    return "".join(ch for ch in title.lower() if ch.isalnum() or ch.isspace()).split()
+
+
 def dedup(items: list[dict]) -> list[dict]:
     seen = load_seen()
     new_items = [item for item in items if item.get("url") and item["url"] not in seen]
 
-    # Also dedup within this run's own batch (same story often found via
-    # multiple methods/queries at once, not just across weekly runs).
+    # Dedup within this run's own batch by URL *and* normalized title -- same
+    # story is routinely found via multiple methods/queries at once, and
+    # sometimes via different mirror URLs for byte-identical content, not
+    # just across weekly runs.
     deduped: list[dict] = []
-    seen_this_run: set[str] = set()
+    seen_urls_this_run: set[str] = set()
+    seen_titles_this_run: set[tuple] = set()
     for item in new_items:
         url = item["url"]
-        if url in seen_this_run:
+        title_key = tuple(_normalize_title(item.get("title", "")))
+        if url in seen_urls_this_run or (title_key and title_key in seen_titles_this_run):
             continue
-        seen_this_run.add(url)
+        seen_urls_this_run.add(url)
+        if title_key:
+            seen_titles_this_run.add(title_key)
         deduped.append(item)
 
-    print(f"[dedup] {len(deduped)}/{len(items)} items are new (not seen in a prior run or duplicated this run)")
-    save_seen(seen | seen_this_run)
+    print(f"[dedup] {len(deduped)}/{len(items)} items are new (not seen in a prior run, and not a duplicate URL or near-duplicate title this run)")
+    save_seen(seen | seen_urls_this_run)
     return deduped
 
 

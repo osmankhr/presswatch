@@ -31,21 +31,33 @@ and novelty).
 
 ## Status
 
-**Stage 0 (scaffolding) done, Stage 1 (fetch + dedup) partially done.**
-Working today: Google News RSS search, curated Turkish business-press feeds,
-cross-source dedup, the keyword pre-filter, and the Claude/OpenRouter LLM
-provider (with real-fallback + real-alert-email verified end-to-end). Not
-yet implemented: Exa search (Stage 1 remainder), the LLM
-classify/categorize step (Stage 2), and the digest builder (Stage 3) — see
-[PLAN.md](PLAN.md).
+**Stage 0 (scaffolding) and Stage 1 (fetch + dedup) done.** Working today:
+Google News RSS search, Exa neural search, curated Turkish business-press
+feeds, cross-run + within-run dedup (by URL and normalized title), the
+keyword pre-filter, and the Claude/OpenRouter LLM provider (with
+real-fallback + real-alert-email verified end-to-end). Not yet implemented:
+the LLM classify/categorize step (Stage 2) and the digest builder (Stage 3)
+— see [PLAN.md](PLAN.md).
 
-Real end-to-end verification already run against the live entity: search
-correctly surfaces genuine coverage (e.g. a Webrazzi interview with Emre
-Danacı) and the keyword filter correctly rejects real-world noise already
-encountered — an unrelated person who happens to share the surname "Danacı,"
-and a batch of Google News hits that turned out to be German amateur
-football fixtures with no actual textual match. That's real confirmation the
-precision problem this project exists to solve is real, not hypothetical.
+Real end-to-end verification already run against the live entity, and it's
+already doing its job finding real precision problems to solve rather than
+hypothetical ones:
+- Search correctly surfaces genuine coverage (a Webrazzi interview with
+  Emre Danacı).
+- The keyword filter correctly rejects real noise: unrelated people who
+  happen to share the surname "Danacı" (found three so far — Ahmet Eymen,
+  Uğur, Onur), German amateur football fixture pages, and Exa's
+  recency-constrained search broadening to generic "ING Bank" content
+  (branch listings, SWIFT codes) for an "ING Hubs Türkiye" query.
+- Title-based dedup correctly collapsed a real duplicate: the identical Al
+  Jazeera article served from two different CDN mirror subdomains, which
+  URL-only dedup would have treated as two separate stories.
+
+A full run (207 raw items across all three sources → 71 new after dedup →
+5 after the keyword filter) shows the funnel working as designed: cheap
+methods cut obvious volume, and everything that survives is a genuinely
+hard case — real surname collisions — that only Stage 2's LLM
+classification can resolve.
 
 ## Running it
 

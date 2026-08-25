@@ -95,7 +95,7 @@ being designed for up front.
   independent methods here (Exa + Google News + curated feed) and dedup
   needs to happen once across all of them, not per-source.
 
-## Stage 1 — Fetch + dedup — partially done
+## Stage 1 — Fetch + dedup — done 2026-08-25
 
 - [x] Google News RSS search — implemented, verified against the real
   entity: correctly surfaces genuine coverage (a Webrazzi interview with
@@ -108,16 +108,31 @@ being designed for up front.
 - [x] Curated Turkish business-press feeds — implemented via
   `rss_common.fetch_rss` (already generic enough to need zero changes),
   all 5 configured feeds verified live.
-- [x] Cross-run + within-run dedup by URL (`cache/seen_store.py` +
-  `main.py`'s `dedup()`).
-- [ ] Exa search — not yet implemented (`fetchers/exa_search.py` is
-  currently a stub that raises `NotImplementedError`; `main.py` catches
-  that and skips it, logging that it was skipped).
-- [ ] Normalized-title near-duplicate check beyond exact URL match (same
-  story, different URL, across outlets) — not yet implemented.
-- [ ] Full verification (a week or two of real news, manually spot-checked
-  against known real coverage) — partially done via the fetch-only runs
-  above, but not yet over a sustained period.
+- [x] Exa search — implemented (`fetchers/exa_search.py`), same call shape as
+  hr_tech's `search.py` but `category="news"`. Verified for real, and
+  surfaced its own precision lesson: constraining by recency (last 10 days)
+  pushes Exa's neural matching to broaden semantically, returning generic
+  "ING Bank" content (branch listings, SWIFT codes, TCMB commentary
+  attributed to ING) for an "ING Hubs Türkiye" query -- the existing keyword
+  pre-filter already correctly rejects all of it (none of it contains "ing
+  hubs" or "danacı"/"danaci"), so no filter change was needed, but it's
+  further confirmation of why the fetch/filter split exists.
+- [x] Cross-run dedup by URL + **within-run dedup by URL and normalized
+  title** (`cache/seen_store.py` + `main.py`'s `dedup()`/`_normalize_title()`).
+  The title check is not theoretical: real testing surfaced the identical
+  Al Jazeera article served from two different CDN mirror subdomains
+  (`aljazeeranews-mggx1uo47w.edgeone.app` vs `aljazeeranews-3fuh52rgrl.edgeone.app`,
+  same path, same content) -- URL-only dedup would have let both through as
+  if they were two different stories. Verified the fix collapses that exact
+  case to one item.
+- [x] Full pipeline (`main.py --fetch-only`) run end-to-end with all three
+  real sources wired in together: 207 raw items -> 71 new after dedup -> 5
+  after the keyword pre-filter. All 5 survivors are real surname-collision
+  false positives (Uğur Danacı, Onur Danacı, an unrelated Gündem article, a
+  Judo-club piece mentioning someone surnamed Danacı) -- exactly the
+  precision problem Stage 2 exists to solve, now with concrete real
+  fixtures to build and test the classifier against instead of hypothetical
+  ones.
 
 ## Stage 2 — Classification (precision layer)
 
