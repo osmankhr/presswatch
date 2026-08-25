@@ -134,14 +134,47 @@ being designed for up front.
   fixtures to build and test the classifier against instead of hypothetical
   ones.
 
-## Stage 2 — Classification (precision layer)
+## Stage 2 — Classification (precision layer) — done 2026-08-25
 
-- [ ] Build `classifier.py` per the precision strategy above: confirm +
-  categorize + low-confidence-include-don't-drop.
-- [ ] Verification: deliberately feed it a few known false-positive-shaped
-  inputs (generic "ING" mentions unrelated to the entity) and confirm they
-  get excluded, plus a few genuine-but-ambiguous-sounding ones to confirm
-  they come through flagged low-confidence rather than dropped.
+- [x] Built `classifier.py`: confirm + categorize + low-confidence-include,
+  via `llm_provider.call_model_text` (so it automatically gets the Claude
+  default / OpenRouter fallback / alert-on-fallback behavior for free).
+  Decision policy: exclude only when the model is confident it's NOT a
+  match; keep everything else (confident matches, and anything genuinely
+  uncertain) -- implemented exactly as `if confidence != "low" and not
+  is_match: return None`, everything else survives. A total call failure
+  (both providers down) is treated the same as model uncertainty -- kept,
+  not dropped.
+- [x] Verified against 27 real fixtures gathered from the actual Stage 1
+  sources (not synthetic examples) — result: 17 kept, 10 confidently
+  excluded, and the excluded set turned out to be a much richer real-world
+  precision test than anticipated:
+  - Three different unrelated people who share only the surname "Danacı"
+    (Emincan, Ömer, and — becoming SEDAŞ's new general manager, a
+    completely different company — Gökay Fatih), all correctly excluded.
+  - A genuinely different person sharing the *entire full name* "Emre
+    Danacı" (a "Dijital Çizer"/digital-artist student in Kayseri, per their
+    own LinkedIn profile) — correctly excluded on a full-name collision,
+    not just a surname one.
+  - The single hardest case found: a LinkedIn post literally attributed to
+    "Emre DANACI" discussing ING leadership topics — but the profile
+    details in the post itself (Retail Banking Analytics Tribe Lead at ING,
+    not CEO of ING Hubs Türkiye) revealed it's a *different* Emre Danacı
+    within the same broader ING organization. The classifier correctly read
+    into the bio details to disambiguate rather than pattern-matching on
+    the name alone.
+  - Correctly excluded "We've officially launched ING Hubs Spain" — a
+    different country's ING Hubs subsidiary, not Türkiye.
+  - Of the 17 kept: categorization looked right throughout, including
+    correctly tagging two distinct items as `award_recognition` (a
+    "küresel başarı"/global-success piece and a LinkedIn post literally
+    captioned "two recognitions") — the exact category Osman said not to
+    miss.
+  - Additionally constructed one deliberately ambiguous synthetic case (a
+    bare surname mention with zero identifying context) specifically to
+    verify the low-confidence-keep path, since none of the 27 real fixtures
+    happened to land there — confirmed it comes through with
+    `confidence="low"` rather than being dropped.
 
 ## Stage 3 — Digest + delivery
 
