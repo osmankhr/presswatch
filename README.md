@@ -57,6 +57,16 @@ anticipated — which the classifier now handles correctly:
   — the exact category Osman said not to miss.
 - Title-based dedup correctly collapsed a real duplicate: the identical Al
   Jazeera article served from two different CDN mirror subdomains.
+- Recency filtering (default 10-day window, a deliberate small overlap past
+  a strict 7 days) and duplicate-prevention (a persistent seen-URL store,
+  `cache/seen_store.py`) were both already built as of Stage 0/1 -- and got
+  re-proven live rather than just asserted: running the real production
+  path twice in immediate succession dropped from 71 new items down to just
+  4 on the second run, confirming the memory genuinely blocks re-surfacing
+  the same items across separate runs.
+- Also fixed: a real production run with nothing to report was still
+  emailing a "no new items this week" digest. Changed it to skip sending
+  entirely on a quiet run instead.
 
 A real full run (with a widened window to get a representative example --
 production defaults to the last 10 days, which is often quiet) went 335 raw

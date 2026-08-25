@@ -203,6 +203,27 @@ being designed for up front.
   previews, which meant previewing a digest would silently make those same
   items disappear from the *next* real run. Fixed so only a real send
   (no preview flag) marks items as seen -- verified by exercising both paths.
+- [x] **Recency filter and duplicate-prevention re-confirmed live, 2026-08-25**
+  — Osman asked for these as if they might be missing; both were already
+  built (Stage 0/1: `config.DAYS_BACK=10` default recency window, and
+  `cache/seen_store.py`'s persistent seen-URL memory), just not obvious from
+  the earlier example email, which deliberately used a widened
+  `--days-back 400` window and a reset cache to produce a rich demo. Proved
+  it live instead of just asserting it: ran the real production path
+  (default settings, no overrides) twice in immediate succession —
+  run 1 found 71/207 new items (0 kept after classification, correctly
+  excluding the same known false-positive noise), run 2 immediately after
+  found only 4/207 new against the identical 207 raw items, confirming the
+  seen-cache genuinely blocks re-surfacing across separate runs, not just in
+  a single process's own within-run dedup.
+- [x] **Design fix from that same verification**: both runs found 0
+  confirmed items and still sent a "no new items this week" email. Changed
+  `main.py` to skip sending entirely when there's nothing to report, rather
+  than emailing an empty digest every quiet run — verified `digest.build_sections([])`
+  is falsy so the skip condition is reachable. (`DAYS_BACK` was also
+  reconsidered — kept at 10 rather than a strict 7, since the extra few
+  days are a deliberate overlap buffer against a run firing late; open to
+  revisiting if that ever feels wrong in practice.)
 - [ ] Cron: **deliberately not set up yet** (Osman's explicit instruction) —
   this is the one remaining item before PressWatch runs unattended. All the
   pieces work; wiring the weekly schedule (matching quoideneuf's crontab

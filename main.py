@@ -121,6 +121,12 @@ def run(fetch_only: bool = False, dry_run: bool = False, days_back: int = DAYS_B
         print("\n[dry-run] email not sent.")
         return
 
+    if not sections:
+        # No confirmed or low-confidence items this run -- skip sending
+        # rather than emailing a "nothing new" digest every quiet week.
+        print("\n[main] no items this run -- skipping send (nothing to report).")
+        return
+
     from config import DIGEST_RECIPIENTS
     from mailer import send
 
