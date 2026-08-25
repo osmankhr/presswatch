@@ -1,0 +1,6 @@
+agentmail
+feedparser
+requests
+python-dotenv
+jinja2
+exa-py

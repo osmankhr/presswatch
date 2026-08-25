@@ -2,6 +2,6 @@
 __pycache__/
 *.pyc
 .venv/
-cache/
+cache/seen_urls.json
 *.log
 .DS_Store

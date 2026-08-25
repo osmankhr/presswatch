@@ -70,35 +70,54 @@ being designed for up front.
     seconds of "not relevant"; a false negative means a real mention (maybe
     an award) never gets seen at all. Recall wins the tie.
 
-## Stage 0 — Scaffolding
+## Stage 0 — Scaffolding — done 2026-08-25
 
-- [ ] Repo layout (mirrors quoideneuf): `fetchers/` (Exa search wrapper,
-  Google News RSS query builder, curated Turkish press feed list — reusing
-  `rss_common.fetch_rss`), `filter.py` (keyword pre-pass), `classifier.py`
-  (the LLM confirm+categorize step, replacing `scorer.py`), `digest.py`,
-  `mailer.py` (AgentMail, same pattern as quoideneuf), `config.py` (entity
-  name variants, recipient list, RSS feed URLs), `main.py`.
-- [ ] Shared LLM provider module (Claude via n8n profile, OpenRouter
-  fallback, alert email) — same as Curio's plan; write it once, use from
-  both repos (or factor out to a tiny shared package later if that gets
-  annoying — not worth doing up front for two callers).
-- [ ] `.env.example`: `AGENTMAIL_API_KEY`, `EXA_API_KEY`, `OPENROUTER_API_KEY`,
-  recipient list, Claude profile name.
-- [ ] `cache/` dir for a seen-URLs store (mirrors quoideneuf's dedup cache)
-  so the same story doesn't get re-flagged every week it's still floating
-  around.
+- [x] Repo layout (mirrors quoideneuf): `fetchers/` (`google_news.py`
+  implemented and verified; `exa_search.py` stubbed for Stage 1;
+  `rss_common.py` copied verbatim from quoideneuf), `filter.py` (keyword
+  pre-pass, implemented — curated distinctive markers, not
+  naively-tokenized entity names, since generic tokens like "Türkiye"/"Emre"
+  would pass through nearly everything), `classifier.py` and `digest.py`
+  (stubbed for Stage 2/3, interfaces defined), `mailer.py` (AgentMail,
+  implemented), `config.py` (entity queries, curated feed list — all 5
+  feeds verified live and parsing), `main.py` (orchestrator with a working
+  `--fetch-only` mode).
+- [x] Shared LLM provider module (`llm_provider.py`) — Claude via the
+  `aiworkspacetr` n8n profile by default, OpenRouter fallback on failure,
+  one-time-per-run alert email. Verified for real: a genuine Claude call
+  through the profile (cost/timing logged correctly), and a genuine forced
+  failure that correctly fell back and sent a real alert email via
+  AgentMail end-to-end (not just unit-tested in isolation).
+- [x] `.env.example`: all vars documented, including reusing hr_tech's
+  existing `EXA_API_KEY` rather than provisioning a new one.
+- [x] `cache/seen_store.py` — one shared seen-URL store, not per-fetcher like
+  quoideneuf, since the same story routinely surfaces via multiple
+  independent methods here (Exa + Google News + curated feed) and dedup
+  needs to happen once across all of them, not per-source.
 
-## Stage 1 — Fetch + dedup
+## Stage 1 — Fetch + dedup — partially done
 
-- [ ] Implement the three source types from the recall strategy above.
-- [ ] Dedup across sources by URL, then a simple normalized-title
-  near-duplicate check (same story often runs on multiple outlets with
-  slightly different headlines).
-- [ ] Verification: run fetch-only against the real entity config, manually
-  eyeball the raw candidate list for a week or two of real news before
-  wiring in the classifier — confirms the sources are actually finding
-  known real coverage (spot-check against something you already know
-  happened) before trusting the pipeline's judgment on top of it.
+- [x] Google News RSS search — implemented, verified against the real
+  entity: correctly surfaces genuine coverage (a Webrazzi interview with
+  Emre Danacı) and, running it for real, already turned up two concrete
+  real-world precision problems worth keeping as classifier.py test
+  fixtures later: (1) an unrelated person, "Ahmet Eymen Danacı," who shares
+  only the surname, and (2) a batch of German amateur football fixture
+  pages that Google News' looser English-locale matching surfaced with no
+  actual textual connection to the query at all.
+- [x] Curated Turkish business-press feeds — implemented via
+  `rss_common.fetch_rss` (already generic enough to need zero changes),
+  all 5 configured feeds verified live.
+- [x] Cross-run + within-run dedup by URL (`cache/seen_store.py` +
+  `main.py`'s `dedup()`).
+- [ ] Exa search — not yet implemented (`fetchers/exa_search.py` is
+  currently a stub that raises `NotImplementedError`; `main.py` catches
+  that and skips it, logging that it was skipped).
+- [ ] Normalized-title near-duplicate check beyond exact URL match (same
+  story, different URL, across outlets) — not yet implemented.
+- [ ] Full verification (a week or two of real news, manually spot-checked
+  against known real coverage) — partially done via the fetch-only runs
+  above, but not yet over a sustained period.
 
 ## Stage 2 — Classification (precision layer)
 
