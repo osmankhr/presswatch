@@ -156,13 +156,19 @@ being designed for up front.
     Danacı" (a "Dijital Çizer"/digital-artist student in Kayseri, per their
     own LinkedIn profile) — correctly excluded on a full-name collision,
     not just a surname one.
-  - The single hardest case found: a LinkedIn post literally attributed to
-    "Emre DANACI" discussing ING leadership topics — but the profile
-    details in the post itself (Retail Banking Analytics Tribe Lead at ING,
-    not CEO of ING Hubs Türkiye) revealed it's a *different* Emre Danacı
-    within the same broader ING organization. The classifier correctly read
-    into the bio details to disambiguate rather than pattern-matching on
-    the name alone.
+  - **Correction (Osman, 2026-08-25):** the hardest case found — a LinkedIn
+    post attributed to "Emre DANACI, Retail Banking Analytics Tribe Lead at
+    ING" — was initially (wrongly) classified as a different person, on the
+    assumption that a different job title meant a different Emre Danacı.
+    Osman confirmed this is the *same* Emre Danacı — he holds multiple
+    roles within the broader ING organization, not only "CEO of ING Hubs
+    Türkiye." Fixed by adding this explicitly to the system prompt (a
+    different ING job title is not evidence of a different person for this
+    specific individual); re-verified against the exact same fixture and it
+    now correctly comes through as a match. Re-ran the three genuine
+    exclusions (the two unrelated "Danacı" surname collisions and "ING Hubs
+    Spain") afterward to confirm the wider rule didn't cause them to
+    regress — it didn't.
   - Correctly excluded "We've officially launched ING Hubs Spain" — a
     different country's ING Hubs subsidiary, not Türkiye.
   - Of the 17 kept: categorization looked right throughout, including

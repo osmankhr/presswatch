@@ -41,11 +41,15 @@ anticipated — which the classifier now handles correctly:
 - Search correctly surfaces genuine coverage (a Webrazzi interview with
   Emre Danacı).
 - Beyond simple surname collisions (three different unrelated "Danacı"s
-  found), real testing turned up an actual **full-name** collision: a
-  different person also named "Emre Danacı" (a "Retail Banking Analytics
-  Tribe Lead at ING," not the CEO) posting about ING leadership topics on
-  LinkedIn. The classifier correctly read the profile details in the post
-  itself to tell them apart, rather than pattern-matching on the name.
+  found), real testing turned up a genuine full-name collision: a
+  different person, also named "Emre Danacı," with no ING connection
+  anywhere in the item — correctly excluded. A second case that *looked*
+  like the same kind of collision (an "Emre DANACI, Retail Banking
+  Analytics Tribe Lead at ING" LinkedIn post) turned out to be the *same*
+  Emre Danacı after all — he holds multiple roles within ING beyond CEO of
+  ING Hubs Türkiye. That was corrected in the classifier's rules after
+  Osman flagged it, and re-verified it doesn't cause the real collisions
+  above to regress.
 - Also correctly excluded "ING Hubs Spain" (a different country's
   subsidiary) and correctly tagged two genuine items as `award_recognition`
   — the exact category Osman said not to miss.

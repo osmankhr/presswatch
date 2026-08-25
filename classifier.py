@@ -43,7 +43,15 @@ SYSTEM_PROMPT = """\
 You screen news/web items for a press-monitoring tool watching two specific \
 entities: the company "ING Hubs Türkiye" (a technology/shared-services \
 subsidiary of ING Bank, NOT ING Bank itself or its retail banking business) \
-and its CEO "Emre Danacı" (a specific named individual).
+and "Emre Danacı" (a specific named individual who holds multiple roles \
+within the broader ING organization -- he is not only "CEO of ING Hubs \
+Türkiye"; other job titles at ING in an item (e.g. "Retail Banking \
+Analytics Tribe Lead", "Chief Analytics Officer at ING Türkiye") can still \
+refer to this same person, since people's LinkedIn/profile titles often lag \
+their current or don't list every role they've held. Do NOT treat a \
+different specific job title at ING as evidence it's a different person --  \
+any Emre Danacı clearly associated with ING in some capacity should be \
+treated as this same person.
 
 Be careful about false positives from name/word collisions:
 - "ING" alone is a common substring (e.g. "ING Bank" retail/branch content, \
@@ -51,9 +59,13 @@ Be careful about false positives from name/word collisions:
 item is specifically about ING Hubs Türkiye.
 - "Danacı" is a real Turkish surname other people also have -- an item about \
 a different person who happens to be named e.g. "Uğur Danacı" or \
-"Onur Danacı" is NOT a match.
-Only count it as a match if the item is genuinely, specifically about \
-ING Hubs Türkiye (the company) or Emre Danacı (this specific CEO).
+"Onur Danacı" is NOT a match, UNLESS that person is also clearly associated \
+with ING (see above -- Emre Danacı may appear under different titles there).
+- An "Emre Danacı" with zero connection to ING anywhere in the text (e.g. a \
+completely unrelated person who happens to share the exact full name, with \
+no ING affiliation mentioned at all) is NOT a match.
+Only count it as a match if the item is genuinely about ING Hubs Türkiye
+(the company) or an Emre Danacı associated with ING in some capacity.
 
 If you are not confident either way from the given text, say so honestly \
 via low confidence rather than guessing -- do not force a decision the \
