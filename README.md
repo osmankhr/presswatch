@@ -31,9 +31,11 @@ and novelty).
 
 ## Status
 
-**Stages 0-2 done** (scaffolding, fetch + dedup, LLM classification). Only
-Stage 3 (the digest builder + weekly send) remains — see
-[PLAN.md](PLAN.md).
+**Stages 0-3 done** — scaffolding, fetch + dedup, LLM classification, and
+the digest builder + send are all working, verified with a real end-to-end
+run that sent an actual example email. **Cron is deliberately not set up
+yet** — that's the only remaining step before this runs unattended weekly.
+See [PLAN.md](PLAN.md).
 
 Every stage was verified against real data, not synthetic examples, and
 real testing kept surfacing precision problems harder than originally
@@ -56,22 +58,34 @@ anticipated — which the classifier now handles correctly:
 - Title-based dedup correctly collapsed a real duplicate: the identical Al
   Jazeera article served from two different CDN mirror subdomains.
 
-A full run (207 raw items across all three sources → dedup → keyword
-filter → classifier) shows the funnel working end to end as designed: cheap
-methods cut obvious volume, and the LLM classification step resolves the
-genuinely hard remaining cases correctly.
+A real full run (with a widened window to get a representative example --
+production defaults to the last 10 days, which is often quiet) went 335 raw
+items → 275 new → 31 after the keyword filter → 19 kept after
+classification, grouped into Awards & Recognition, Business & Product, and
+General Mentions -- and an actual digest email was sent and landed
+correctly.
+
+That same verification run also found a real bug: previewing a digest
+(`--fetch-only`/`--dry-run`) was permanently marking items as "seen," so
+running a preview then a real send right after would silently find nothing.
+Fixed so only a real send consumes the seen-state.
 
 ## Running it
 
 ```bash
 cp .env.example .env   # fill in AGENTMAIL_API_KEY, EXA_API_KEY, etc.
 uv run --with agentmail --with feedparser --with requests --with python-dotenv \
-  --with jinja2 --with exa-py python3 main.py --fetch-only
+  --with exa-py python3 main.py --fetch-only
 ```
 
-`--fetch-only` runs fetch + dedup + keyword filter only and prints the
-surviving candidates. `--dry-run` runs the full pipeline including
-classification and stops with a clear "not yet implemented" error at the
-digest-building step (Stage 3) instead of emailing anything. Plain `python
-main.py` will do the same until Stage 3 lands, since it can't build or send
-a digest yet.
+- `--fetch-only`: fetch + dedup + keyword filter only, prints candidates,
+  does not touch seen-state.
+- `--dry-run`: full pipeline including classification and digest
+  rendering, prints the digest instead of emailing it, does not touch
+  seen-state.
+- `--days-back N`: override `config.DAYS_BACK` for a backfill or a richer
+  one-off example run.
+- Plain `python main.py`: the real thing -- fetches, classifies, **sends the
+  digest email**, and marks everything as seen for next time.
+
+No cron job is set up yet -- runs are manual until that's wanted.

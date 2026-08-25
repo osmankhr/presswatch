@@ -19,13 +19,13 @@ from fetchers import google_news, rss_common
 from filter import apply as apply_filter
 
 
-def fetch_all() -> list[dict]:
+def fetch_all(days_back: int = DAYS_BACK) -> list[dict]:
     items: list[dict] = []
 
     print("[fetch] Google News RSS search...")
     for query in ENTITY_QUERIES:
         for edition in GOOGLE_NEWS_EDITIONS:
-            batch = google_news.fetch(query, edition, days_back=DAYS_BACK)
+            batch = google_news.fetch(query, edition, days_back=days_back)
             print(f"  {query!r} ({edition['hl']}): {len(batch)} items")
             items.extend(batch)
 
@@ -34,7 +34,7 @@ def fetch_all() -> list[dict]:
         from fetchers import exa_search
 
         for query in ENTITY_QUERIES:
-            batch = exa_search.fetch(query, days_back=DAYS_BACK)
+            batch = exa_search.fetch(query, days_back=days_back)
             print(f"  {query!r}: {len(batch)} items")
             items.extend(batch)
     except NotImplementedError:
@@ -43,7 +43,7 @@ def fetch_all() -> list[dict]:
     print("[fetch] curated Turkish business-press feeds...")
     for feed in CURATED_RSS_FEEDS:
         batch = rss_common.fetch_rss(
-            feed["url"], source=feed["name"], category=feed["category"], days_back=DAYS_BACK
+            feed["url"], source=feed["name"], category=feed["category"], days_back=days_back
         )
         print(f"  {feed['name']}: {len(batch)} items")
         items.extend(batch)
@@ -59,7 +59,11 @@ def _normalize_title(title: str) -> list[str]:
     return "".join(ch for ch in title.lower() if ch.isalnum() or ch.isspace()).split()
 
 
-def dedup(items: list[dict]) -> list[dict]:
+def dedup(items: list[dict], persist: bool = True) -> list[dict]:
+    """persist=False for preview modes (--fetch-only, --dry-run) -- a preview
+    that permanently marks items as "seen" would mean the next *real* run
+    silently skips everything you just looked at. Only a real send should
+    consume the seen-state."""
     seen = load_seen()
     new_items = [item for item in items if item.get("url") and item["url"] not in seen]
 
@@ -81,18 +85,21 @@ def dedup(items: list[dict]) -> list[dict]:
         deduped.append(item)
 
     print(f"[dedup] {len(deduped)}/{len(items)} items are new (not seen in a prior run, and not a duplicate URL or near-duplicate title this run)")
-    save_seen(seen | seen_urls_this_run)
+    if persist:
+        save_seen(seen | seen_urls_this_run)
+    else:
+        print("[dedup] preview mode -- not persisting seen-state")
     return deduped
 
 
-def run(fetch_only: bool = False, dry_run: bool = False) -> None:
+def run(fetch_only: bool = False, dry_run: bool = False, days_back: int = DAYS_BACK) -> None:
     week_label = datetime.now(timezone.utc).strftime("Week of %B %d, %Y")
     print(f"\n=== PressWatch | {week_label} ===\n")
 
-    raw = fetch_all()
+    raw = fetch_all(days_back=days_back)
     print(f"\n[fetch] total: {len(raw)} raw items\n")
 
-    new_items = dedup(raw)
+    new_items = dedup(raw, persist=not (fetch_only or dry_run))
     candidates = apply_filter(new_items)
 
     if fetch_only:
@@ -129,10 +136,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--fetch-only", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Override config.DAYS_BACK (e.g. for a backfill or a richer one-off example run)",
+    )
     args = parser.parse_args()
 
     try:
-        run(fetch_only=args.fetch_only, dry_run=args.dry_run)
+        run(
+            fetch_only=args.fetch_only,
+            dry_run=args.dry_run,
+            days_back=args.days_back if args.days_back is not None else DAYS_BACK,
+        )
     except NotImplementedError as exc:
         print(f"\n[main] stopped at a not-yet-implemented stage: {exc}", file=sys.stderr)
         sys.exit(1)

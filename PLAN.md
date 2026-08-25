@@ -182,19 +182,31 @@ being designed for up front.
     happened to land there — confirmed it comes through with
     `confidence="low"` rather than being dropped.
 
-## Stage 3 — Digest + delivery
+## Stage 3 — Digest + delivery — mostly done 2026-08-25
 
-- [ ] Weekly digest email: awards/recognition surfaced first regardless of
-  chronological order (that's the category Osman explicitly said not to
-  miss), then executive news, business news, general mentions; low-confidence
-  items in their own clearly-labeled section at the bottom rather than mixed
-  in.
-- [ ] Send via AgentMail to Osman (and whoever else should get this —
-  confirm recipient list).
-- [ ] Cron: weekly.
-- [ ] Verification: run one full real week end-to-end, confirm the email
-  reads clearly and the categorization/ordering holds up before considering
-  this live.
+- [x] Weekly digest email: `digest.py` groups by category in
+  `config.CATEGORIES` order (award/recognition first, as required), with
+  low-confidence items pulled into their own trailing section regardless of
+  category rather than mixed in.
+- [x] Send via AgentMail — reuses `mailer.send()`, unchanged from Stage 0.
+- [x] Verification: ran the **real, full pipeline end-to-end** (not a
+  synthetic test) with a widened `--days-back 400` (via a new CLI override,
+  since the real production 10-day window is often empty right now — see
+  `main.py --days-back`) and an actually-sent example email landed in
+  Osman's inbox: 335 raw items → 275 new → 31 after keyword filter → 19
+  kept after classification, grouped into Awards & Recognition (3),
+  Business & Product (6), and General Mentions (10). No low-confidence
+  items this run (none were borderline), and no Executive/Leadership or
+  Reputational/Negative items either -- sections only render when non-empty.
+- [x] **Fixed a real correctness bug found during this verification**:
+  `dedup()` was persisting seen-state even during `--fetch-only`/`--dry-run`
+  previews, which meant previewing a digest would silently make those same
+  items disappear from the *next* real run. Fixed so only a real send
+  (no preview flag) marks items as seen -- verified by exercising both paths.
+- [ ] Cron: **deliberately not set up yet** (Osman's explicit instruction) —
+  this is the one remaining item before PressWatch runs unattended. All the
+  pieces work; wiring the weekly schedule (matching quoideneuf's crontab
+  pattern) is a small, final step whenever that's wanted.
 
 ## Explicit non-goals
 
